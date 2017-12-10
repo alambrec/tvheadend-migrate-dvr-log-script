@@ -4,7 +4,7 @@ class fetch:
 
     def __init__( self, path, channels ):
         # Init logger
-        self.logger = logging.getLogger('main.channels')
+        self.logger = logging.getLogger('main.fetch')
         self.logger.info('creating an instance of fetch')
         # Init TVHeadend root path
         self.tvhpath = path
