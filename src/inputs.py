@@ -1,8 +1,53 @@
 import glob, json, sys, os, hashlib, uuid, logging, gzip
 
-#logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(asctime)s|%(levelname)s|%(funcName)s: %(message)s', datefmt='%H:%M:%S')
-
 PATH = "./samples/muxes_4.2.sample"
+
+class inputs:
+
+    def __init__( self, path, revision ):
+        # Init logger
+        self.logger = logging.getLogger('main.inputs')
+        self.logger.info('creating an instance of inputs')
+        # Init TVHeadend root path
+        self.tvhpath = path
+        self.tvhrev = revision
+        self.inputs = {}
+
+    def load( self ):
+        self.inputs["dvb"] = self.load_dvb()
+        self.inputs["iptv"] = self.load_iptv()
+
+    def get( self ):
+        return self.inputs
+
+    def load_dvb( self ):
+        if os.path.isdir(self.tvhpath + '/var/input/dvb/networks'):
+            if(self.tvhrev > 4.0):
+                a = htsmsg_binary(self.tvhpath + '/var/input/dvb/networks')
+                a.load_networks()
+                return { "networks" : a.get_networks() }
+            else:
+                a = htsmsg_json(self.tvhpath + '/var/input/dvb/networks')
+                a.load_networks()
+                return { "networks" : a.get_networks() }
+        else:
+            self.logger.warning("DVB directory not found")
+            return {}
+
+    def load_iptv( self ):
+        if os.path.isdir(self.tvhpath + '/var/input/iptv/networks'):
+            if(self.tvhrev > 4.0):
+                a = htsmsg_binary(self.tvhpath + '/var/input/iptv/networks')
+                a.load_networks()
+                return { "networks" : a.get_networks() }
+            else:
+                a = htsmsg_json(self.tvhpath + '/var/input/iptv/networks')
+                a.load_networks()
+                return { "networks" : a.get_networks() }
+        else:
+            self.logger.warning("IPTV directory not found")
+            return {}
+
 
 class htsmsg_binary:
 
@@ -18,8 +63,9 @@ class htsmsg_binary:
         self.HMF_LIST=5
         self.HMF_DBL=6
         self.HMF_BOOL=7
-        # Set filepath
-        self.tvhpath = path
+        # Set networkspath
+        self.networkspath = path
+        self.networks = {}
 
     def BytesToLong( self, rawBytes ):
         if isinstance(rawBytes, bytearray):
@@ -198,25 +244,20 @@ class htsmsg_binary:
 
         return returnData
 
-
-    def load_dvb( self ):
-        dvb = {}
-        dvb["networks"] = self.load_networks(self.tvhpath + '/var/input/dvb/networks')
-        return dvb
-
-    def load_networks( self, networkspath ):
-        networks = {}
-        for network_path in glob.glob( networkspath + '/*' ):
+    def load_networks( self ):
+        for network_path in glob.glob( self.networkspath + '/*' ):
             if os.path.isdir(network_path):
                 network_uuid = os.path.basename(network_path)
                 fd = open(network_path + '/config').read()
                 jd = json.loads(fd)
-                networks[network_uuid] = {}
-                networks[network_uuid]["config"] = jd
-                networks[network_uuid]["muxes"] = self.load_muxes(network_path + '/muxes')
+                self.networks[network_uuid] = {}
+                self.networks[network_uuid]["config"] = jd
+                self.networks[network_uuid]["muxes"] = self.load_muxes(network_path + '/muxes')
             else:
                 self.logger.debug(" %s is not a directory", network_path)
-        return networks
+
+    def get_networks( self ):
+        return self.networks
 
     def load_muxes( self, muxespath ):
         muxes = {}
@@ -248,26 +289,26 @@ class htsmsg_binary:
 class htsmsg_json:
 
     def __init__( self, path ):
-        self.tvhpath = path
+        # Init logger
+        self.logger = logging.getLogger('main.htsmsg_json')
+        self.logger.info('creating an instance of htsmsg_binary')
+        # Init TVHeadend path
+        self.networkspath = path
+        self.networks = {}
 
-    def load_dvb( self ):
-        dvb = {}
-        dvb["networks"] = self.load_networks(self.tvhpath + '/var/input/dvb/networks')
-        return dvb
-
-    def load_networks( self, networkspath ):
-        networks = {}
-        for network_path in glob.glob( networkspath + '/*' ):
+    def load_networks( self ):
+        for network_path in glob.glob( self.networkspath + '/*' ):
             if os.path.isdir(network_path):
                 network_uuid = os.path.basename(network_path)
                 fd = open(network_path + '/config').read()
                 jd = json.loads(fd)
-                networks[network_uuid] = {}
-                networks[network_uuid]["config"] = jd
-                networks[network_uuid]["muxes"] = self.load_muxes(network_path + '/muxes')
+                self.networks[network_uuid] = {}
+                self.networks[network_uuid]["config"] = jd
+                self.networks[network_uuid]["muxes"] = self.load_muxes(network_path + '/muxes')
             else:
                 self.logger.debug(" %s is not a directory", network_path)
-        return networks
+    def get_networks( self ):
+        return self.networks
 
     def load_muxes( self, muxespath ):
         muxes = {}
