@@ -1,4 +1,5 @@
 import glob, json, sys, os, hashlib, uuid, logging, gzip
+from collections import OrderedDict, Counter
 
 class dvblogs:
 
@@ -53,12 +54,12 @@ class dvblogs:
                 print("Saisie incorrecte, merci de rentrer une valeur correcte")
             else:
                 self.default_user = i
-                print("Utilisateur " + self.users[self.default_user]['username'] + " sélectionné avec config_name : " + self.users[self.default_user]['config_name'])
+                print("Utilisateur " + self.users[self.default_user]['username'] + " sélectionné avec config_name : " + self.users[self.default_user]['config_name'][0])
                 confirm_user = True
 
     def upgrade_logs( self ):
         print("> Début de la mise à jour des logs :")
-        for l_uuid, log in self.logs:
+        for l_uuid, log in self.logs.items():
             # structure temporaire de chaque logs
             temp = OrderedDict([
                 ("start", 0),
@@ -118,8 +119,8 @@ class dvblogs:
                     continue
                 # Migrate channel
                 if 'channelname' in log_jd:
-                    temp["channelname"] = channels[merge_channels[log_jd["channelname"]]]["svcname"]
-                    temp["channel"] = channels[merge_channels[log_jd["channelname"]]]["uuid"]
+                    temp["channelname"] = self.channels[self.mergings[log_jd["channelname"]]]["svcname"]
+                    temp["channel"] = self.channels[self.mergings[log_jd["channelname"]]]["uuid"]
                 else:
                     self.logger.warning("unable to find channelname for %s", log['pathname'])
             # Migrate timerec
@@ -163,14 +164,14 @@ class dvblogs:
                 self.logger.debug("unable to find contenttype for %s", log['pathname'])
 
             # save migrated log
-            self.log(temp)
+            self.save_log(temp)
 
     def save_log( self, content ):
         filename = uuid.uuid4().hex
-        filepath = d_tvhpath + "/var/dvr/log/" + filename
+        filepath = self.d_tvhpath + "/var/dvr/log/" + filename
         while os.path.isfile(filepath):
             self.logger.error("file %s already exist !", filepath)
-            filepath = d_tvhpath + "/var/dvr/log/" + filename
+            filepath = self.d_tvhpath + "/var/dvr/log/" + filename
         # Open a file for writing
         fd = open(filepath, 'w')
 

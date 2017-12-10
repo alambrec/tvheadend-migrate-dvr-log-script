@@ -30,4 +30,6 @@ class users:
         print("N°" + "\t" + "Nom utilisateurs".ljust(28) + "dvr_config".ljust(32))
         print("".ljust(64,"-"))
         for u_uuid, user in self.users.items():
-            print(str(u_uuid) + "\t" + user["username"].ljust(28) + user["config_name"].ljust(32))
+            # print(u_uuid)
+            # print(user)
+            print(str(u_uuid) + "\t" + user["username"].ljust(28) + user["config_name"][0].ljust(32))
